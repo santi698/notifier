@@ -1,6 +1,7 @@
-use crate::notifications::{Notification, NotificationRequest};
+use crate::notifications::{Notification, NotificationCreateRequest, NotificationUpdateRequest};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[get("/notifications")]
 async fn find_all(db_pool: web::Data<PgPool>) -> impl Responder {
@@ -12,7 +13,7 @@ async fn find_all(db_pool: web::Data<PgPool>) -> impl Responder {
 }
 
 #[get("/notifications/{id}")]
-async fn find(id: web::Path<i32>, db_pool: web::Data<PgPool>) -> impl Responder {
+async fn find(id: web::Path<Uuid>, db_pool: web::Data<PgPool>) -> impl Responder {
   let result = Notification::find_by_id(id.into_inner(), db_pool.get_ref()).await;
   match result {
     Ok(notification) => HttpResponse::Ok().json(notification),
@@ -22,20 +23,22 @@ async fn find(id: web::Path<i32>, db_pool: web::Data<PgPool>) -> impl Responder 
 
 #[post("/notifications")]
 async fn create(
-  notification: web::Json<NotificationRequest>,
+  notification: web::Json<NotificationCreateRequest>,
   db_pool: web::Data<PgPool>,
 ) -> impl Responder {
   let result = Notification::create(notification.into_inner(), db_pool.get_ref()).await;
   match result {
     Ok(notification) => HttpResponse::Ok().json(notification),
-    _ => HttpResponse::BadRequest().body("Error trying to create new notification"),
+    _ => {
+      HttpResponse::BadRequest().body("Error trying to create new notification {}")
+    }
   }
 }
 
 #[put("/notifications/{id}")]
 async fn update(
-  id: web::Path<i32>,
-  notification: web::Json<NotificationRequest>,
+  id: web::Path<Uuid>,
+  notification: web::Json<NotificationUpdateRequest>,
   db_pool: web::Data<PgPool>,
 ) -> impl Responder {
   let result = Notification::update(
@@ -51,7 +54,7 @@ async fn update(
 }
 
 #[delete("/notifications/{id}")]
-async fn delete(id: web::Path<i32>, db_pool: web::Data<PgPool>) -> impl Responder {
+async fn delete(id: web::Path<Uuid>, db_pool: web::Data<PgPool>) -> impl Responder {
   let result = Notification::delete(id.into_inner(), db_pool.get_ref()).await;
   match result {
     Ok(rows) => {
